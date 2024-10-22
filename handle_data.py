@@ -25,6 +25,8 @@ def acquire_map_data(dest_path, source_url_template):
 
 def format_freq(freq):
     return "{:.0f}".format(freq).zfill(3)
+def format_real(real):
+    return "{:.0f}".format(real).zfill(5)
 
 
 def get_planck_obs_data(detector, assets_directory):
@@ -48,6 +50,27 @@ def get_planck_obs_data(detector, assets_directory):
     dest_path = Path(assets_directory) / obs_map_fn
     acquire_map_data(dest_path, url_template_maps)  # Download the data if it doesn't exist. Do this ahead of time.
     return dest_path
+
+
+def get_planck_noise_data(detector, assets_directory, realization=0):
+    """
+    Get the filename for the Planck noise data, downloading it if necessary.
+
+    Parameters
+    ----------
+    realization : int
+        The realization number for the noise map. Default is 0. There are 300 available.
+    """
+    ring_cut = "full"
+    planck_noise_fn_template = "ffp10_noise_{frequency}_{ring_cut}_map_mc_{realization}.fits"
+    url_template_sims = "http://pla.esac.esa.int/pla/aio/product-action?SIMULATED_MAP.FILE_ID={fn}"
+
+    fn = planck_noise_fn_template.format(frequency=format_freq(detector), 
+                                         ring_cut=ring_cut, 
+                                         realization=format_real(realization))
+    fn = Path(assets_directory) / fn
+    acquire_map_data(fn, url_template_sims)
+    return fn
 
 
 def get_map_dtype(m: np.ndarray):
