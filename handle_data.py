@@ -1,7 +1,50 @@
 from pathlib import Path
 import requests
+import logging
 
 import numpy as np
+from tqdm import tqdm
+
+
+logger = logging.getLogger(__name__)
+
+
+def acquire_map_data_progress(dest_path, source_url_template, file_size=None):
+    """Load map data from a file, downloading it if necessary."""
+    need_to_dl = False
+    if not dest_path.exists():
+        logger.info(f"File {dest_path} does not exist; downloading.")
+        need_to_dl = True
+    elif dest_path.stat().st_size < 1024:  # If the file is less than 1KB, it's a placeholder file
+        logger.info(f"File {dest_path} has placeholder file; redownloading.")
+        need_to_dl = True
+    elif file_size is not None and dest_path.stat().st_size < file_size * 1000 * 1000:
+        logger.info(f"File {dest_path} is too small; redownloading.")
+        need_to_dl = True
+    else:
+        logger.debug(f"File {dest_path} exists.")
+
+    fn = dest_path.name
+    if need_to_dl:
+        response = requests.get(source_url_template.format(fn=fn), stream=True)
+        total_size = int(response.headers.get('content-length', 0))
+        
+        if total_size == 0 and file_size is not None:
+            total_size = file_size * 1000 * 1000  # Convert MB to bytes
+
+        chunk_size = 1024 * 1024  # Download in 1MB chunks
+
+        with open(dest_path, "wb") as file, tqdm(
+            desc=f"Downloading {fn}",
+            total=total_size,
+            unit="B",
+            unit_scale=True,
+            unit_divisor=1024,
+            leave=False
+        ) as progress_bar:
+            for chunk in response.iter_content(chunk_size=chunk_size):
+                file.write(chunk)
+                progress_bar.update(len(chunk))
 
 
 def acquire_map_data(dest_path, source_url_template):
@@ -52,7 +95,7 @@ def get_planck_obs_data(detector, assets_directory):
     return dest_path
 
 
-def get_planck_noise_data(detector, assets_directory, realization=0):
+def get_planck_noise_data(detector, assets_directory, realization=0, progress=False):
     """
     Get the filename for the Planck noise data, downloading it if necessary.
 
@@ -61,6 +104,11 @@ def get_planck_noise_data(detector, assets_directory, realization=0):
     realization : int
         The realization number for the noise map. Default is 0. There are 300 available.
     """
+    if detector in [30, 44, 70]:
+        file_size = 150  # MB, 1 less than decimal size as seen in Files explorer
+    else:
+        file_size = 603  # MB, 1 less than decimal size as seen in Files explorer
+
     ring_cut = "full"
     planck_noise_fn_template = "ffp10_noise_{frequency}_{ring_cut}_map_mc_{realization}.fits"
     url_template_sims = "http://pla.esac.esa.int/pla/aio/product-action?SIMULATED_MAP.FILE_ID={fn}"
@@ -69,7 +117,10 @@ def get_planck_noise_data(detector, assets_directory, realization=0):
                                          ring_cut=ring_cut, 
                                          realization=format_real(realization))
     fn = Path(assets_directory) / fn
-    acquire_map_data(fn, url_template_sims)
+    if progress:
+        acquire_map_data_progress(fn, url_template_sims, file_size=file_size)
+    else:
+        acquire_map_data(fn, url_template_sims)
     return fn
 
 
