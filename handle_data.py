@@ -104,10 +104,13 @@ def get_planck_noise_data(detector, assets_directory, realization=0, progress=Fa
     realization : int
         The realization number for the noise map. Default is 0. There are 300 available.
     """
+    # All file sizes are in decimal MB, as seen in Files explorer, minus 1
     if detector in [30, 44, 70]:
-        file_size = 150  # MB, 1 less than decimal size as seen in Files explorer
-    else:
-        file_size = 603  # MB, 1 less than decimal size as seen in Files explorer
+        file_size = 150  # IQU maps at nside=1024
+    elif detector in [545, 857]:
+        file_size = 200  # I maps at nside=2048
+    else:                # 100, 143, 217, 353
+        file_size = 603  # IQU maps at nside=2048
 
     ring_cut = "full"
     planck_noise_fn_template = "ffp10_noise_{frequency}_{ring_cut}_map_mc_{realization}.fits"
