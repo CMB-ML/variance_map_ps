@@ -3,7 +3,7 @@ import requests
 import logging
 
 import numpy as np
-from tqdm import tqdm
+from tqdm.notebook import tqdm
 
 
 logger = logging.getLogger(__name__)
@@ -40,7 +40,8 @@ def acquire_map_data_progress(dest_path, source_url_template, file_size=None):
             unit="B",
             unit_scale=True,
             unit_divisor=1024,
-            leave=False
+            leave=False,
+            position=1
         ) as progress_bar:
             for chunk in response.iter_content(chunk_size=chunk_size):
                 file.write(chunk)
