@@ -45,6 +45,7 @@ Three notebooks should be looked at:
     - Requires finding a square root and inverse matrix per pixel
     - May need to be optimized with PyTorch for expediency when creating simulations
         - Currently takes ~5 minutes to determine these values for all pixels
+- Finding the average power spectrum of Planck Noise [planck_sims_mean_cl.ipynb](planck_sims_mean_cl.ipynb)
 
 # TODO
 
