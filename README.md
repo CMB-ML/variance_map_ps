@@ -1,5 +1,7 @@
 # Overview
 
+NOTE: This readme is slightly out of date. It will be updated in-depth soon to cover how target Cl's are determined.
+
 This is a temporary repository and results will be integrated into CMB-ML.
 
 The purpose is to demonstrate an implementation of noise generation which is (1) spatially anisotropic, (2) spatially correlated, (3) field correlated, all at the target output resolution.
@@ -10,7 +12,34 @@ The next step, (2), is derived from the method given in Appendix A of Planck CO 
 
 The final step, (3), has yet to be fully implemented.
 
-# Method of Appendix A of Planck CO Revisited (Temperature only)
+# Issues found
+- Variance map noise is white
+    - Determine filter (sqrt ratio of target cl to white cl), apply to alms
+- Boxcar smoothing
+    - remedy: no boxcar, use exact cl of white noise, and target cl from planck simulations
+- Singular covariance of power spectra across planck simulations
+    - remedy: use PCA
+- Two-mode pixel distributions (due to l0 and aniso white noise sign)
+    - remedy: match signs of white noise mean and target distribution mean
+- Log scale impact on monopole
+    - remedy: determine a new mean and map-wide constant; adjust additively
+- Units
+    - remedy: carefully apply/manage astropy units
+- Galactic systematics in 353, 545, 857 GHz
+    - no remedy yet
+    - proposed: derive target Cl from difference between simulations
+- Polarization noise
+    - no remedy yet
+    - proposed 
+        - From target, get all power spectra per simulation; stack, get PCA of this array (probably capped at 1535 for our simulations for now?)
+        - For target, get realization from PCA
+        - For white, make map from II, QQ, UU cov fields; --> get almT, almE, almB, then TT, TE, TB, EE, EB, BB spectra
+        - Get sqrt(spectra ratios) = filter
+        - Reshape as covariance; do ones @ filter
+        - apply ones[0] to almT; etc; alm2map
+        - Will result be properly correlated across TQU?
+
+# Method of Appendix A of Planck CO Revisited (Temperature only) (OLD - IGNORE)
 
 The method of Appendix A of Planck CO Revisited was written for a more complicated situation. It turns out that the process is simple. The method for temperature maps only follows. For each frequency, separately:
 
@@ -30,7 +59,7 @@ The method of Appendix A of Planck CO Revisited was written for a more complicat
 11. Apply the filter to the $a_{\ell m}$'s (from 10.)
 12. Convert the $a_{\ell m}$'s back to pixel space.
 
-# Contents of Note
+# Contents of Note (OLD - IGNORE)
 
 Three notebooks should be looked at:
 - Spatially anisotropic noise (1) [variance_map_ps.ipynb](variance_map_ps.ipynb)
@@ -47,7 +76,7 @@ Three notebooks should be looked at:
         - Currently takes ~5 minutes to determine these values for all pixels
 - Finding the average power spectrum of Planck Noise [planck_sims_mean_cl.ipynb](planck_sims_mean_cl.ipynb)
 
-# TODO
+# TODO (OLD - IGNORE)
 
 - Figure out what to do for multiple maps
 - Finish IQU
