@@ -12,7 +12,7 @@ import matplotlib.transforms as transforms
 
 from tqdm import tqdm  # For progress bars
 
-from handle_data import get_map_dtype, get_planck_obs_data, get_planck_noise_data
+from cmbml.utils.handle_data import get_map_dtype, get_planck_obs_data, get_planck_noise_data
 
 
 logger = logging.getLogger("handle_data")
@@ -20,7 +20,6 @@ logger.setLevel(logging.DEBUG)
 
 
 DATA_ROOT = "/bigdata/cmb_project/data/Assets/"
-# ASSETS_DIRECTORY = f"{DATA_ROOT}/Assets/Planck/"
 PLANCK_NOISE_DIR = f"{DATA_ROOT}/Planck_Noise/"
 
 DETECTORS = [30, 44, 70, 100, 143, 217, 353, 545, 857]
@@ -65,7 +64,13 @@ def get_ps_data(detector):
     maps_means = []
     for i in tqdm(range(N_PLANCK_SIMS)):
         src_map_fn = get_planck_noise_data(detector=detector, assets_directory=PLANCK_NOISE_DIR, realization=i, progress=True)
-        t_src_map = hp.read_map(src_map_fn) * 1e6
+
+        # Don't bother using astropy units here
+        src_map_unit = get_field_unit(src_map_fn, 1, 0)
+        if src_map_unit not in ["K_CMB", "MJy/sr"]:
+            raise ValueError(f"Unknown unit {src_map_unit} for map {src_map_fn}")
+        t_src_map = hp.read_map(src_map_fn)
+
         maps_means.append(np.mean(t_src_map))
         src_cls.append(hp.anafast(t_src_map, lmax=lmax))
 
@@ -87,7 +92,6 @@ def get_ps_data(detector):
     # We need the mean and standard deviation of the maps_means so we can adjust the monopole as needed
     maps_mean = np.mean(maps_means)
     maps_sd = np.std(maps_means)
-    maps_unit = get_field_unit(src_map_fn, hdu=1, field_idx=0)
 
     # Save the results; delete the variables so we know we test loading them
     np.savez(f"noise_model_{detector}GHz.npz", 
@@ -96,7 +100,7 @@ def get_ps_data(detector):
              variance=variance, 
              maps_mean=maps_mean, 
              maps_sd=maps_sd,
-             maps_unit=maps_unit)
+             maps_unit=src_map_unit)
 
 
 if __name__ == "__main__":
