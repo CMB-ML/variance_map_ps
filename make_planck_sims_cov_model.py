@@ -12,17 +12,18 @@ import matplotlib.transforms as transforms
 
 from tqdm import tqdm  # For progress bars
 
-from cmbml.utils.handle_data import get_map_dtype, get_planck_obs_data, get_planck_noise_data
+from cmbml.utils.get_maps import get_planck_noise_data
 
 
 logger = logging.getLogger("handle_data")
 logger.setLevel(logging.DEBUG)
 
 
-DATA_ROOT = "/bigdata/cmb_project/data/Assets/"
-PLANCK_NOISE_DIR = f"{DATA_ROOT}/Planck_Noise/"
+DATA_ROOT = "/shared/data/Assets/"
+PLANCK_NOISE_DIR = f"{DATA_ROOT}/PlanckNoise/"
 
-DETECTORS = [30, 44, 70, 100, 143, 217, 353, 545, 857]
+DETECTORS = [545]
+# DETECTORS = [30, 44, 70, 100, 143, 217, 353, 545, 857]
 N_PLANCK_SIMS = 100
 
 
@@ -54,22 +55,26 @@ def get_field_unit(fits_fn, hdu, field_idx):
 
 
 def get_ps_data(detector):
-    if detector in [30, 44, 70]:
-        nside = 1024
-    else:
-        nside = 2048
+    subtract_average = detector in [353, 545, 857]
+    nside = 1024 if detector in [30, 44, 70] else 2048
+
+    if subtract_average:
+        avg = hp.read_map(f"noise_avgs/avg_noise_map_{detector}_TQU_100.fits")
+
     lmax = get_lmax_for_nside(nside)  # Defined above as 3*Nside-1
     # Getting power spectra for 100 maps at 100 GHz takes ~50 minutes
     src_cls = []
     maps_means = []
     for i in tqdm(range(N_PLANCK_SIMS)):
-        src_map_fn = get_planck_noise_data(detector=detector, assets_directory=PLANCK_NOISE_DIR, realization=i, progress=True)
+        src_map_fn = get_planck_noise_data(detector=detector, assets_directory=PLANCK_NOISE_DIR, realization=i)
 
         # Don't bother using astropy units here
         src_map_unit = get_field_unit(src_map_fn, 1, 0)
         if src_map_unit not in ["K_CMB", "MJy/sr"]:
             raise ValueError(f"Unknown unit {src_map_unit} for map {src_map_fn}")
         t_src_map = hp.read_map(src_map_fn)
+        if subtract_average:
+            t_src_map -= avg
 
         maps_means.append(np.mean(t_src_map))
         src_cls.append(hp.anafast(t_src_map, lmax=lmax))
@@ -94,7 +99,7 @@ def get_ps_data(detector):
     maps_sd = np.std(maps_means)
 
     # Save the results; delete the variables so we know we test loading them
-    np.savez(f"noise_model_{detector}GHz.npz", 
+    np.savez(f"noise_model_{detector}GHz_diff.npz", 
              mean_ps=mean_ps, 
              components=components, 
              variance=variance, 
