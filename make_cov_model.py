@@ -32,7 +32,6 @@ logging.basicConfig(
 DATA_ROOT = "/data/jim/CMB_Data/"
 ASSETS_DIRECTORY = f"{DATA_ROOT}/Assets/Planck/"
 PLANCK_NOISE_DIR = f"{DATA_ROOT}/Assets/PlanckNoise/"
-# For running on Markov in Docker container
 # DATA_ROOT = "/shared/data/Assets/"
 # PLANCK_NOISE_DIR = f"{DATA_ROOT}/PlanckNoise/"
 
@@ -110,55 +109,55 @@ def convert_field_str_to_Unit(unit_str):
             raise ValueError(f"Unit {unit_str} not recognized")
 
 
-def get_scale_map(det, nside_out):
-    obs_fn = get_planck_obs_data(detector=det, assets_directory=ASSETS_DIRECTORY)
-    use_field = get_xxcov_field_num(det, 'II')
-    II_cov_map = hp.read_map(obs_fn, hdu=1, field=use_field)
-    II_cov_map_512 = _change_variance_map_resolution(II_cov_map, nside_out)
-    scale_map = np.sqrt(II_cov_map_512)
+# def get_scale_map(det, nside_out):
+#     obs_fn = get_planck_obs_data(detector=det, assets_directory=ASSETS_DIRECTORY)
+#     use_field = get_xxcov_field_num(det, 'II')
+#     II_cov_map = hp.read_map(obs_fn, hdu=1, field=use_field)
+#     II_cov_map_512 = _change_variance_map_resolution(II_cov_map, nside_out)
+#     scale_map = np.sqrt(II_cov_map_512)
 
-    var_map_unit = get_field_unit(obs_fn, hdu=1, field_idx=use_field)
-    var_map_unit = convert_field_str_to_Unit(var_map_unit)
-    scale_map_unit = var_map_unit**0.5
-    scale_map = u.Quantity(scale_map, unit=scale_map_unit)
+#     var_map_unit = get_field_unit(obs_fn, hdu=1, field_idx=use_field)
+#     var_map_unit = convert_field_str_to_Unit(var_map_unit)
+#     scale_map_unit = var_map_unit**0.5
+#     scale_map = u.Quantity(scale_map, unit=scale_map_unit)
 
-    return scale_map
-
-
-def get_target_cls_from_pca_results(n_sims, src_mean_ps, src_variance, src_components):
-    num_components = len(src_variance)
-
-    std_devs = np.sqrt(src_variance)
-
-    if n_sims == 1:
-        reduced_shape = (num_components,)
-    else:
-        reduced_shape = (n_sims, num_components)
-
-    reduced_samples = np.random.normal(0, std_devs, reduced_shape)
-    # Reconstruct power spectra in log10 space
-    tgt_log_ps = reduced_samples @ src_components + src_mean_ps
-    # Convert out of log10 space
-    tgt_cls = 10**tgt_log_ps
-    return tgt_cls
+#     return scale_map
 
 
-def make_tgt_noise_params_from_det_file(det, n_sims):
-    data = np.load(f"noise_models/noise_model_{det}GHz.npz")
+# def get_target_cls_from_pca_results(n_sims, src_mean_ps, src_variance, src_components):
+#     num_components = len(src_variance)
 
-    src_mean_ps     = data['mean_ps']
-    src_components  = data['components']
-    src_variance    = data['variance']
+#     std_devs = np.sqrt(src_variance)
 
-    # src_mean_maps   = data['maps_mean']
-    # src_sd_maps     = data['maps_sd']
-    src_map_unit    = data['maps_unit']
+#     if n_sims == 1:
+#         reduced_shape = (num_components,)
+#     else:
+#         reduced_shape = (n_sims, num_components)
 
-    src_map_unit = convert_field_str_to_Unit(src_map_unit)
+#     reduced_samples = np.random.normal(0, std_devs, reduced_shape)
+#     # Reconstruct power spectra in log10 space
+#     tgt_log_ps = reduced_samples @ src_components + src_mean_ps
+#     # Convert out of log10 space
+#     tgt_cls = 10**tgt_log_ps
+#     return tgt_cls
 
-    tgt_cls = get_target_cls_from_pca_results(n_sims, src_mean_ps, src_variance, src_components)
 
-    return tgt_cls, src_map_unit
+# def make_tgt_noise_params_from_det_file(det, n_sims):
+#     data = np.load(f"noise_models/noise_model_{det}GHz.npz")
+
+#     src_mean_ps     = data['mean_ps']
+#     src_components  = data['components']
+#     src_variance    = data['variance']
+
+#     # src_mean_maps   = data['maps_mean']
+#     # src_sd_maps     = data['maps_sd']
+#     src_map_unit    = data['maps_unit']
+
+#     src_map_unit = convert_field_str_to_Unit(src_map_unit)
+
+#     tgt_cls = get_target_cls_from_pca_results(n_sims, src_mean_ps, src_variance, src_components)
+
+#     return tgt_cls, src_map_unit
 
 
 def downgrade_map_via_alm(some_map, target_nside):

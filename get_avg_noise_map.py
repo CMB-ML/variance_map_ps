@@ -7,14 +7,10 @@ import pysm3.units as u
 from astropy.io import fits
 
 from cmbml.utils.get_maps import get_planck_noise_data
-# from cmbml.utils.fits_inspection import get_field_unit
 
 
 DATA_ROOT = "/shared/data/Assets"
 PLANCK_NOISE_DIR = f"{DATA_ROOT}/PlanckNoise/"
-
-# DATA_ROOT = "/data/jim/CMB_Data/Assets"
-# PLANCK_NOISE_DIR = f"{DATA_ROOT}/PlanckNoise/"
 
 DETECTORS = [30, 44, 70, 100, 143, 217, 353, 545, 857]
 N_NOISE_SIMS = 100
@@ -84,10 +80,10 @@ def make_avg_maps(det):
     elif DO_FIELDS == "TQU":
         column_units = [*[str(avg_noise_map.unit)]*3]
 
-    hp.write_map(out_file_path(det), avg_noise_map, 
+    hp.write_map(out_file_path(det), avg_noise_map,
                 column_names=column_names, 
                 column_units=column_units,
-                dtype=np.float32,  # Same filetype as the original maps
+                dtype=np.float32,
                 overwrite=OVERWRITE_EXISTING)
 
 
